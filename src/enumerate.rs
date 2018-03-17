@@ -1,8 +1,8 @@
 extern crate udev;
 
-use std::{io, vec};
+use std::path::PathBuf;
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Path, PathBuf};
+use std::io;
 use Ddc;
 
 /// Enumerate all currently attached displays on the system. Implements an
@@ -68,7 +68,7 @@ impl Iterator for Enumerator {
                 continue
             }
 
-            if Ddc::from_path(devnode).and_then(|mut ddc| ddc.edid_legacy(0, &mut [0u8])).is_err() {
+            if Ddc::from_path(devnode).and_then(|mut ddc| ddc.read_edid(0, &mut [0u8])).is_err() {
                 continue
             }
 
