@@ -22,7 +22,7 @@ use Ddc;
 /// for display_path in displays {
 ///     let mut ddc = Ddc::from_path(display_path).unwrap();
 ///     let mccs_version = ddc.execute(commands::GetVcpFeature::new(0xdf)).unwrap();
-///     println!("MCCS version: {:04x}", mccs_version.value());
+///     println!("MCCS version: {:04x}", mccs_version.maximum());
 /// }
 /// ```
 ///

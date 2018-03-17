@@ -10,7 +10,7 @@
 //!
 //! let mut ddc = Ddc::from_path("/dev/i2c-4").unwrap();
 //! let mccs_version = ddc.execute(commands::GetVcpFeature::new(0xdf)).unwrap();
-//! println!("MCCS version: {:04x}", mccs_version.value());
+//! println!("MCCS version: {:04x}", mccs_version.maximum());
 //! ```
 
 extern crate i2c_linux as i2c;
