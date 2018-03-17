@@ -4,6 +4,10 @@ rust:
 sudo: false
 os:
 - linux
+addons:
+  apt:
+    packages:
+    - libudev-dev
 cache:
   directories:
   - "$HOME/.cargo"
