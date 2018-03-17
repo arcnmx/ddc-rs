@@ -8,8 +8,8 @@
 //! ```rust,no_run
 //! use ddc::{Ddc, commands};
 //!
-//! let mut ddc = Ddc::from_path("/dev/i2c-4").expect("Failed to open I2C device");
-//! let mccs_version = ddc.execute(commands::GetVcpFeature::new(0xdf)).expect("Failed to read VCP feature");
+//! let mut ddc = Ddc::from_path("/dev/i2c-4").unwrap();
+//! let mccs_version = ddc.execute(commands::GetVcpFeature::new(0xdf)).unwrap();
 //! println!("MCCS version: {:04x}", mccs_version.value());
 //! ```
 

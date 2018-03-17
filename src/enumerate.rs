@@ -18,10 +18,10 @@ use Ddc;
 /// ```rust,no_run
 /// use ddc::{Enumerator, Ddc, commands};
 ///
-/// let displays = Enumerator::new().expect("Failed to enumerate displays");
+/// let displays = Enumerator::new().unwrap();
 /// for display_path in displays {
-///     let mut ddc = Ddc::from_path(display_path).expect("Failed to open I2C device");
-///     let mccs_version = ddc.execute(commands::GetVcpFeature::new(0xdf)).expect("Failed to read VCP feature");
+///     let mut ddc = Ddc::from_path(display_path).unwrap();
+///     let mccs_version = ddc.execute(commands::GetVcpFeature::new(0xdf)).unwrap();
 ///     println!("MCCS version: {:04x}", mccs_version.value());
 /// }
 /// ```
