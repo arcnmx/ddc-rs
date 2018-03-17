@@ -88,34 +88,6 @@ impl<I> Ddc<I> {
 }
 
 impl<I: AsRawFd + Read + Write> Ddc<I2c<I>> {
-    /// Read part of the EDID using the segments added in the Enhanced Display
-    /// Data Channel (E-DDC) protocol.
-    pub fn read_eddc_edid(&mut self, segment: u8, offset: u8, data: &mut [u8]) -> io::Result<usize> {
-        let len = {
-            let mut msgs = [
-                i2c::Message::Write {
-                    address: I2C_ADDRESS_EDID_SEGMENT,
-                    data: &[segment],
-                    flags: Default::default(),
-                },
-                i2c::Message::Write {
-                    address: I2C_ADDRESS_EDID,
-                    data: &[offset],
-                    flags: Default::default(),
-                },
-                i2c::Message::Read {
-                    address: I2C_ADDRESS_EDID,
-                    data: data,
-                    flags: Default::default(),
-                },
-            ];
-            self.inner.i2c_transfer(&mut msgs)?;
-            msgs[2].len()
-        };
-
-        Ok(len)
-    }
-
     /// Read part of the monitor's EDID. The full 256 bytes must be read in two
     /// segments.
     ///
@@ -152,16 +124,32 @@ impl<I: AsRawFd + Read + Write> Ddc<I2c<I>> {
         Ok(len)
     }
 
-    /// Wait for any previous commands to complete.
-    ///
-    /// The DDC specification defines delay intervals that must occur between
-    /// execution of two subsequent commands, this waits for the amount of time
-    /// remaining since the last command was executed. This is normally done
-    /// internally and shouldn't need to be called manually unless synchronizing
-    /// with an external process or another handle to the same device. It may
-    /// however be desireable to run this before program exit.
-    pub fn sleep(&mut self) {
-        self.delay.sleep()
+    /// Read part of the EDID using the segments added in the Enhanced Display
+    /// Data Channel (E-DDC) protocol.
+    pub fn read_eddc_edid(&mut self, segment: u8, offset: u8, data: &mut [u8]) -> io::Result<usize> {
+        let len = {
+            let mut msgs = [
+                i2c::Message::Write {
+                    address: I2C_ADDRESS_EDID_SEGMENT,
+                    data: &[segment],
+                    flags: Default::default(),
+                },
+                i2c::Message::Write {
+                    address: I2C_ADDRESS_EDID,
+                    data: &[offset],
+                    flags: Default::default(),
+                },
+                i2c::Message::Read {
+                    address: I2C_ADDRESS_EDID,
+                    data: data,
+                    flags: Default::default(),
+                },
+            ];
+            self.inner.i2c_transfer(&mut msgs)?;
+            msgs[2].len()
+        };
+
+        Ok(len)
     }
 
     /// Retrieve the capability string from the device.
@@ -334,6 +322,18 @@ impl<I: AsRawFd + Read + Write> Ddc<I2c<I>> {
         }
 
         Ok(&mut out[2..2 + len])
+    }
+
+    /// Wait for any previous commands to complete.
+    ///
+    /// The DDC specification defines delay intervals that must occur between
+    /// execution of two subsequent commands, this waits for the amount of time
+    /// remaining since the last command was executed. This is normally done
+    /// internally and shouldn't need to be called manually unless synchronizing
+    /// with an external process or another handle to the same device. It may
+    /// however be desireable to run this before program exit.
+    pub fn sleep(&mut self) {
+        self.delay.sleep()
     }
 }
 
