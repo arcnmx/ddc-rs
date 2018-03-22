@@ -16,8 +16,10 @@ travis-ci = { repository = "arcnmx/ddc-rs" }
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-i2c-linux = { version = "^0.0.1" }
+i2c = { version = "^0.0.1", git = "https://github.com/arcnmx/i2c-rs.git" }
+i2c-linux = { version = "^0.0.1", features = ["i2c"], optional = true, git = "https://github.com/arcnmx/i2c-linux-rs.git" }
 udev = { version = "^0.2.0", optional = true }
+resize-slice = "^0.1.2"
 
 [dev-dependencies]
 edid = "^0.2.0"

@@ -1,5 +1,6 @@
 #![allow(missing_docs)]
-use std::{mem, fmt, io};
+use std::{mem, fmt};
+use ErrorCode;
 
 pub trait Command {
     type Ok: CommandResult;
@@ -10,12 +11,12 @@ pub trait Command {
 
     fn len(&self) -> usize;
 
-    fn encode(&self, data: &mut [u8]) -> io::Result<usize>;
+    fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode>;
 }
 
 pub trait CommandResult: Sized {
     const MAX_LEN: usize;
-    fn decode(data: &[u8]) -> io::Result<Self>;
+    fn decode(data: &[u8]) -> Result<Self, ErrorCode>;
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -40,7 +41,7 @@ impl Command for GetVcpFeature {
 
     fn len(&self) -> usize { 2 }
 
-    fn encode(&self, data: &mut [u8]) -> io::Result<usize> {
+    fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 2);
         data[0] = 0x01;
         data[1] = self.code;
@@ -73,7 +74,7 @@ impl Command for SetVcpFeature {
 
     fn len(&self) -> usize { 4 }
 
-    fn encode(&self, data: &mut [u8]) -> io::Result<usize> {
+    fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 4);
 
         data[0] = 0x03;
@@ -118,19 +119,19 @@ impl fmt::Debug for VcpValue {
 impl CommandResult for VcpValue {
     const MAX_LEN: usize = 8;
 
-    fn decode(data: &[u8]) -> io::Result<Self> {
+    fn decode(data: &[u8]) -> Result<Self, ErrorCode> {
         if data.len() != 8 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "VCP value must be 8 bytes long"))
+            return Err(ErrorCode::InvalidLength)
         }
 
         if data[0] != 0x02 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "VCP opcode expected"))
+            return Err(ErrorCode::InvalidOpcode)
         }
 
         match data[1] {
             0x00 => (), // NoError
-            0x01 => return Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported VCP code")),
-            rc => return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Unrecognized VCP error code 0x{:02x}", rc))),
+            0x01 => return Err(ErrorCode::Invalid("Unsupported VCP code".into())),
+            rc => return Err(ErrorCode::Invalid(format!("Unrecognized VCP error code 0x{:02x}", rc))),
         }
 
         // data[2] == vcp code from request
@@ -157,7 +158,7 @@ impl Command for SaveCurrentSettings {
 
     fn len(&self) -> usize { 1 }
 
-    fn encode(&self, data: &mut [u8]) -> io::Result<usize> {
+    fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 1);
         data[0] = 0x0c;
 
@@ -191,7 +192,7 @@ impl<'a> Command for TableWrite<'a> {
 
     fn len(&self) -> usize { 4 + self.data.len() }
 
-    fn encode(&self, data: &mut [u8]) -> io::Result<usize> {
+    fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 4 + self.data.len());
         assert!(self.data.len() <= 32);
 
@@ -229,7 +230,7 @@ impl Command for TableRead {
 
     fn len(&self) -> usize { 4 }
 
-    fn encode(&self, data: &mut [u8]) -> io::Result<usize> {
+    fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 4);
 
         data[0] = 0xe2;
@@ -263,7 +264,7 @@ impl Command for CapabilitiesRequest {
 
     fn len(&self) -> usize { 3 }
 
-    fn encode(&self, data: &mut [u8]) -> io::Result<usize> {
+    fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 3);
 
         data[0] = 0xf3;
@@ -305,13 +306,13 @@ impl Default for TableResponse {
 impl CommandResult for TableResponse {
     const MAX_LEN: usize = 36;
 
-    fn decode(data: &[u8]) -> io::Result<Self> {
+    fn decode(data: &[u8]) -> Result<Self, ErrorCode> {
         if data.len() < 4 || data.len() > 36  { // spec says 3 - 35???
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "table response invalid length"))
+            return Err(ErrorCode::InvalidLength)
         }
 
         if data[0] != 0xe4 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "table response opcode expected"))
+            return Err(ErrorCode::InvalidOpcode)
         }
 
         let mut table = TableResponse::default();
@@ -332,13 +333,13 @@ pub struct CapabilitiesReply {
 impl CommandResult for CapabilitiesReply {
     const MAX_LEN: usize = 35;
 
-    fn decode(data: &[u8]) -> io::Result<Self> {
+    fn decode(data: &[u8]) -> Result<Self, ErrorCode> {
         if data.len() < 3 || data.len() > 35  {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "capabilities response invalid length"))
+            return Err(ErrorCode::InvalidLength)
         }
 
         if data[0] != 0xe3 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "capabilities response opcode expected"))
+            return Err(ErrorCode::InvalidOpcode)
         }
 
         Ok(CapabilitiesReply {
@@ -360,7 +361,7 @@ impl Command for GetTimingReport {
 
     fn len(&self) -> usize { 1 }
 
-    fn encode(&self, data: &mut [u8]) -> io::Result<usize> {
+    fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 1);
         data[0] = 0x07;
 
@@ -378,13 +379,13 @@ pub struct TimingMessage {
 impl CommandResult for TimingMessage {
     const MAX_LEN: usize = 6;
 
-    fn decode(data: &[u8]) -> io::Result<Self> {
+    fn decode(data: &[u8]) -> Result<Self, ErrorCode> {
         if data.len() != 6 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "timing message invalid length"))
+            return Err(ErrorCode::InvalidLength)
         }
 
         if data[0] != 0x4e {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "timing message opcode expected"))
+            return Err(ErrorCode::InvalidOpcode)
         }
 
         Ok(TimingMessage {
@@ -398,7 +399,7 @@ impl CommandResult for TimingMessage {
 impl CommandResult for () {
     const MAX_LEN: usize = 0;
 
-    fn decode(_data: &[u8]) -> io::Result<Self> {
+    fn decode(_data: &[u8]) -> Result<Self, ErrorCode> {
         unreachable!()
     }
 }
@@ -412,7 +413,7 @@ impl<'a, C: Command> Command for &'a C {
 
     fn len(&self) -> usize { (*self).len() }
 
-    fn encode(&self, data: &mut [u8]) -> io::Result<usize> {
+    fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         (*self).encode(data)
     }
 }
