@@ -8,9 +8,11 @@
 //! ```rust,no_run
 //! use ddc::{Ddc, commands};
 //!
+//! # #[cfg(feature = "i2c-linux")] fn ddc() {
 //! let mut ddc = Ddc::from_path("/dev/i2c-4").unwrap();
 //! let mccs_version = ddc.execute(commands::GetVcpFeature::new(0xdf)).unwrap();
 //! println!("MCCS version: {:04x}", mccs_version.maximum());
+//! # }
 //! ```
 
 extern crate resize_slice;
@@ -110,11 +112,13 @@ impl<I: i2c::Address + i2c::BlockTransfer> Ddc<I> {
     /// ```rust,no_run
     /// use ddc::Ddc;
     ///
+    /// # #[cfg(feature = "i2c-linux")] fn ddc() {
     /// let mut ddc = Ddc::from_path("/dev/i2c-4").unwrap();
     /// let mut edid = [0u8; 0x100];
     /// ddc.read_edid(0, &mut edid[..]).unwrap();
     ///
     /// println!("EDID: {:?}", &edid[..]);
+    /// # }
     /// ```
     pub fn read_edid(&mut self, mut offset: u8, mut data: &mut [u8]) -> Result<usize, I::Error> {
         self.inner.set_slave_address(I2C_ADDRESS_EDID, false)?;
@@ -235,9 +239,11 @@ impl<I: i2c::Address + i2c::ReadWrite> Ddc<I> {
     /// ```rust,no_run
     /// use ddc::{Ddc, commands};
     ///
+    /// # #[cfg(feature = "i2c-linux")] fn ddc() {
     /// let mut ddc = Ddc::from_path("/dev/i2c-4").unwrap();
     /// let input = ddc.execute(commands::GetVcpFeature::new(0x60)).unwrap();
     /// println!("Monitor input: {:?}", input.value());
+    /// # }
     ///
     /// ```
     pub fn execute<C: Command>(&mut self, command: C) -> Result<C::Ok, Error<I::Error>> {
