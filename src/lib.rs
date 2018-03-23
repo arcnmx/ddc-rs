@@ -6,11 +6,11 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use ddc::{Ddc, commands};
+//! use ddc::Ddc;
 //!
 //! # #[cfg(feature = "i2c-linux")] fn ddc() {
-//! let mut ddc = Ddc::from_path("/dev/i2c-4").unwrap();
-//! let mccs_version = ddc.execute(commands::GetVcpFeature::new(0xdf)).unwrap();
+//! let mut ddc = ddc::from_i2c_device("/dev/i2c-4").unwrap();
+//! let mccs_version = ddc.get_vcp_feature(0xdf).unwrap();
 //! println!("MCCS version: {:04x}", mccs_version.maximum());
 //! # }
 //! ```
