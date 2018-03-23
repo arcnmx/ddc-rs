@@ -1,4 +1,3 @@
-extern crate i2c;
 extern crate ddc;
 extern crate edid;
 
@@ -13,7 +12,7 @@ fn edid<P: AsRef<Path>>(path: P) -> io::Result<()> {
 
     println!("Opening {}", path.display());
 
-    ddc(Ddc::from_path(path)?)
+    ddc(Ddc::from_i2c_device(path)?)
 }
 
 #[cfg(not(feature = "i2c-linux"))]
@@ -21,9 +20,9 @@ fn edid<P: AsRef<Path>>(_path: P) -> io::Result<()> {
     unimplemented!()
 }
 
-fn ddc<D: i2c::Address + i2c::BlockTransfer>(mut ddc: Ddc<D>) -> Result<(), D::Error> where
-    D::Error: ::std::fmt::Debug,
-    D::Error: From<io::Error>,
+fn ddc<D: ddc::Edid>(mut ddc: D) -> Result<(), D::EdidError> where
+    D::EdidError: ::std::fmt::Debug,
+    D::EdidError: From<io::Error>,
 {
     let mut edid = [0u8; 0x80];
     let len = ddc.read_edid(0, &mut edid)?;

@@ -16,14 +16,36 @@
 //! ```
 
 extern crate resize_slice;
+extern crate mccs;
 #[cfg(feature = "i2c-linux")]
 extern crate i2c_linux;
+#[cfg(feature = "i2c")]
 extern crate i2c;
 
-use std::thread::sleep;
-use std::time::{Instant, Duration};
-use std::{iter, cmp};
-use resize_slice::ResizeSlice;
+use std::{iter, fmt, error};
+use std::time::Duration;
+
+pub use mccs::{FeatureCode, Value as VcpValue};
+
+/// DDC/CI command request and response types.
+pub mod commands;
+pub use commands::{Command, CommandResult, TimingMessage};
+
+#[cfg(all(feature = "udev", feature = "i2c-linux"))]
+mod enumerate;
+
+#[cfg(all(feature = "udev", feature = "i2c-linux"))]
+pub use enumerate::Enumerator;
+
+mod delay;
+pub use delay::Delay;
+
+#[cfg(feature = "i2c")]
+mod i2c_ddc;
+#[cfg(feature = "i2c")]
+pub use i2c_ddc::I2cDdc;
+#[cfg(feature = "i2c-linux")]
+pub use i2c_ddc::{I2cDeviceDdc, from_i2c_device};
 
 /// EDID EEPROM I2C address
 pub const I2C_ADDRESS_EDID: u16 = 0x50;
@@ -37,59 +59,32 @@ pub const I2C_ADDRESS_DDC_CI: u16 = 0x37;
 /// DDC sub-address command prefix
 pub const SUB_ADDRESS_DDC_CI: u8 = 0x51;
 
-const DELAY_COMMAND_FAILED_MS: u64 = 40;
+/// DDC delay required before retrying a request
+pub const DELAY_COMMAND_FAILED_MS: u64 = 40;
 
-/// DDC/CI command request and response types.
-pub mod commands;
-pub use commands::{Command, CommandResult, VcpValue};
+/// A trait that allows retrieving Extended Display Identification Data (EDID)
+/// from a device.
+pub trait Edid {
+    /// An error that can occur when reading the EDID from a device.
+    type EdidError;
 
-#[cfg(all(feature = "udev", feature = "i2c-linux"))]
-mod enumerate;
-
-#[cfg(all(feature = "udev", feature = "i2c-linux"))]
-pub use enumerate::Enumerator;
-
-mod error;
-pub use error::{Error, ErrorCode};
-
-/// A handle to provide DDC/CI operations on an I2C device.
-#[derive(Clone, Debug)]
-pub struct Ddc<I> {
-    inner: I,
-    delay: Delay,
+    /// Read up to 256 bytes of the monitor's EDID.
+    fn read_edid(&mut self, offset: u8, data: &mut [u8]) -> Result<usize, Self::EdidError>;
 }
 
-#[cfg(feature = "i2c-linux")]
-impl Ddc<i2c_linux::I2c<::std::fs::File>> {
-    /// Open a new DDC/CI handle with the specified I2C device node path
-    pub fn from_path<P: AsRef<::std::path::Path>>(p: P) -> ::std::io::Result<Self> {
-        Ok(Ddc::new(i2c_linux::I2c::from_path(p)?))
-    }
+/// E-DDC allows reading extensions of Enhanced EDID.
+pub trait Eddc: Edid {
+    /// Read part of the EDID using the segments added in the Enhanced Display
+    /// Data Channel (E-DDC) protocol.
+    fn read_eddc_edid(&mut self, segment: u8, offset: u8, data: &mut [u8]) -> Result<usize, Self::EdidError>;
 }
 
-impl<I> Ddc<I> {
-    /// Create a new DDC/CI handle with an existing open device.
-    pub fn new(i2c: I) -> Self {
-        Ddc {
-            inner: i2c,
-            delay: Default::default(),
-        }
-    }
-
-    /// Consume the handle to return the inner device.
-    pub fn into_inner(self) -> I {
-        self.inner
-    }
-
-    /// Borrow the inner device.
-    pub fn inner_ref(&self) -> &I {
-        &self.inner
-    }
-
-    /// Mutably borrow the inner device.
-    pub fn inner_mut(&mut self) -> &mut I {
-        &mut self.inner
-    }
+/// A DDC host is able to communicate with a DDC device such as a display.
+pub trait DdcHost {
+    /// An error that can occur when communicating with a DDC device.
+    ///
+    /// Usually impls `From<ErrorCode>`.
+    type Error;
 
     /// Wait for any previous commands to complete.
     ///
@@ -99,91 +94,135 @@ impl<I> Ddc<I> {
     /// internally and shouldn't need to be called manually unless synchronizing
     /// with an external process or another handle to the same device. It may
     /// however be desireable to run this before program exit.
-    pub fn sleep(&mut self) {
-        self.delay.sleep()
+    fn sleep(&mut self) { }
+}
+
+/// Allows the execution of arbitrary low level DDC commands.
+pub trait DdcCommandRaw: DdcHost {
+    /// Executes a raw DDC/CI command.
+    ///
+    /// A response should not be read unless `out` is not empty, and the delay
+    /// should occur in between any write and read made to the device. A subslice
+    /// of `out` excluding DDC packet headers should be returned.
+    fn execute_raw<'a>(&mut self, data: &[u8], out: &'a mut [u8], response_delay: Duration) -> Result<&'a mut [u8], Self::Error>;
+}
+
+/// Using this marker trait will automatically implement the `DdcCommand` trait.
+pub trait DdcCommandRawMarker: DdcCommandRaw where Self::Error: From<ErrorCode> {
+    /// Sets an internal `Delay` that must expire before the next command is
+    /// attempted.
+    fn set_sleep_delay(&mut self, delay: Delay);
+}
+
+/// A (slightly) higher level interface to `DdcCommandRaw`.
+///
+/// Some DDC implementations only provide access to the higher level commands
+/// exposed in the `Ddc` trait.
+pub trait DdcCommand: DdcHost {
+    /// Execute a DDC/CI command. See the `commands` module for all available
+    /// commands. The return type is dependent on the executed command.
+    fn execute<C: Command>(&mut self, command: C) -> Result<C::Ok, Self::Error>;
+
+    /// Computes a DDC/CI packet checksum
+    fn checksum<II: IntoIterator<Item=u8>>(iter: II) -> u8 {
+        iter.into_iter().fold(0u8, |sum, v| sum ^ v)
+    }
+
+    /// Encodes a DDC/CI command into a packet.
+    ///
+    /// `packet.len()` must be 3 bytes larger than `data.len()`
+    fn encode_command<'a>(data: &[u8], packet: &'a mut [u8]) -> &'a [u8] {
+        packet[0] = SUB_ADDRESS_DDC_CI;
+        packet[1] = 0x80 | data.len() as u8;
+        packet[2..2 + data.len()].copy_from_slice(data);
+        packet[2 + data.len()] = Self::checksum(
+            iter::once((I2C_ADDRESS_DDC_CI as u8) << 1)
+            .chain(packet[..2 + data.len()].iter().cloned())
+        );
+
+        &packet[..3 + data.len()]
     }
 }
 
-impl<I: i2c::Address + i2c::BlockTransfer> Ddc<I> {
-    /// Read up to 256 bytes of the monitor's EDID.
-    ///
-    /// # Example
-    ///
-    /// ```rust,no_run
-    /// use ddc::Ddc;
-    ///
-    /// # #[cfg(feature = "i2c-linux")] fn ddc() {
-    /// let mut ddc = Ddc::from_path("/dev/i2c-4").unwrap();
-    /// let mut edid = [0u8; 0x100];
-    /// ddc.read_edid(0, &mut edid[..]).unwrap();
-    ///
-    /// println!("EDID: {:?}", &edid[..]);
-    /// # }
-    /// ```
-    pub fn read_edid(&mut self, mut offset: u8, mut data: &mut [u8]) -> Result<usize, I::Error> {
-        self.inner.set_slave_address(I2C_ADDRESS_EDID, false)?;
+/// Using this marker trait will automatically implement the `Ddc` and `DdcTable`
+/// traits.
+pub trait DdcCommandMarker: DdcCommand where Self::Error: From<ErrorCode> { }
 
-        let mut len = 0;
-        while !data.is_empty() {
-            let datalen = cmp::min(0x80, data.len());
-            let read = self.inner.i2c_read_block_data(offset, &mut data[..datalen])?;
-            if read == 0 {
-                break
-            }
-            len += read;
-            offset = if let Some(offset) = offset.checked_add(read as u8) {
-                offset
-            } else {
-                break
-            };
-            data.resize_from(read);
-        }
-
-        Ok(len)
-    }
-}
-
-impl<I: i2c::BulkTransfer> Ddc<I> {
-    /// Read part of the EDID using the segments added in the Enhanced Display
-    /// Data Channel (E-DDC) protocol.
-    pub fn read_eddc_edid(&mut self, segment: u8, offset: u8, data: &mut [u8]) -> Result<usize, I::Error> {
-        let len = {
-            let mut msgs = [
-                i2c::Message::Write {
-                    address: I2C_ADDRESS_EDID_SEGMENT,
-                    data: &[segment],
-                    flags: Default::default(),
-                },
-                i2c::Message::Write {
-                    address: I2C_ADDRESS_EDID,
-                    data: &[offset],
-                    flags: Default::default(),
-                },
-                i2c::Message::Read {
-                    address: I2C_ADDRESS_EDID,
-                    data: data,
-                    flags: Default::default(),
-                },
-            ];
-            self.inner.i2c_transfer(&mut msgs)?;
-            msgs[2].len()
-        };
-
-        Ok(len)
-    }
-}
-
-impl<I: i2c::Address + i2c::ReadWrite> Ddc<I> {
+/// A high level interface to DDC commands.
+pub trait Ddc: DdcHost {
     /// Retrieve the capability string from the device.
     ///
     /// This executes multiple `CapabilitiesRequest` commands to construct the entire string.
-    pub fn capabilities_string(&mut self) -> Result<Vec<u8>, Error<I::Error>> {
+    fn capabilities_string(&mut self) -> Result<Vec<u8>, Self::Error>;
+
+    /// Gets the current value of an MCCS VCP feature.
+    fn get_vcp_feature(&mut self, code: FeatureCode) -> Result<VcpValue, Self::Error>;
+
+    /// Sets a VCP feature to the specified value.
+    fn set_vcp_feature(&mut self, code: FeatureCode, value: u16) -> Result<(), Self::Error>;
+
+    /// Instructs the device to save its current settings.
+    fn save_current_settings(&mut self) -> Result<(), Self::Error>;
+
+    /// Retrieves a timing report from the device.
+    fn get_timing_report(&mut self) -> Result<TimingMessage, Self::Error>;
+}
+
+/// Table commands can read and write arbitrary binary data to a VCP feature.
+///
+/// Tables were introduced in MCCS specification versions 3.0 and 2.2.
+pub trait DdcTable: DdcHost {
+    /// Read a table value from the device.
+    fn table_read(&mut self, code: FeatureCode) -> Result<Vec<u8>, Self::Error>;
+
+    /// Write a table value to the device.
+    fn table_write(&mut self, code: FeatureCode, offset: u16, value: &[u8]) -> Result<(), Self::Error>;
+}
+
+/// DDC/CI protocol errors
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ErrorCode {
+    /// Expected matching offset from DDC/CI
+    InvalidOffset,
+    /// DDC/CI invalid packet length
+    InvalidLength,
+    /// Checksum mismatch
+    InvalidChecksum,
+    /// Expected opcode mismatch
+    InvalidOpcode,
+    /// Expected data mismatch
+    InvalidData,
+    /// Custom unspecified error
+    Invalid(String),
+}
+
+impl error::Error for ErrorCode {
+    fn description(&self) -> &str {
+        match *self {
+            ErrorCode::InvalidOffset => "invalid offset returned from DDC/CI",
+            ErrorCode::InvalidLength => "invalid DDC/CI length",
+            ErrorCode::InvalidChecksum => "DDC/CI checksum mismatch",
+            ErrorCode::InvalidOpcode => "DDC/CI VCP opcode mismatch",
+            ErrorCode::InvalidData => "invalid DDC/CI data",
+            ErrorCode::Invalid(ref s) => s,
+        }
+    }
+}
+
+impl fmt::Display for ErrorCode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", error::Error::description(self))
+    }
+}
+
+impl<D: DdcCommandMarker> Ddc for D where D::Error: From<ErrorCode> {
+    fn capabilities_string(&mut self) -> Result<Vec<u8>, Self::Error> {
         let mut string = Vec::new();
         let mut offset = 0;
         loop {
             let caps = self.execute(commands::CapabilitiesRequest::new(offset))?;
             if caps.offset != offset {
-                return Err(Error::Ddc(ErrorCode::InvalidOffset))
+                return Err(ErrorCode::InvalidOffset.into())
             } else if caps.data.is_empty() {
                 break
             }
@@ -196,14 +235,31 @@ impl<I: i2c::Address + i2c::ReadWrite> Ddc<I> {
         Ok(string)
     }
 
-    /// Read a table value from the device.
-    pub fn table_read(&mut self, code: commands::FeatureCode) -> Result<Vec<u8>, Error<I::Error>> {
+    fn get_vcp_feature(&mut self, code: FeatureCode) -> Result<VcpValue, Self::Error> {
+        self.execute(commands::GetVcpFeature::new(code))
+    }
+
+    fn set_vcp_feature(&mut self, code: FeatureCode, value: u16) -> Result<(), Self::Error> {
+        self.execute(commands::SetVcpFeature::new(code, value))
+    }
+
+    fn save_current_settings(&mut self) -> Result<(), Self::Error> {
+        self.execute(commands::SaveCurrentSettings)
+    }
+
+    fn get_timing_report(&mut self) -> Result<TimingMessage, Self::Error> {
+        self.execute(commands::GetTimingReport)
+    }
+}
+
+impl<D: DdcCommandMarker> DdcTable for D where D::Error: From<ErrorCode> {
+    fn table_read(&mut self, code: FeatureCode) -> Result<Vec<u8>, Self::Error> {
         let mut value = Vec::new();
         let mut offset = 0;
         loop {
             let table = self.execute(commands::TableRead::new(code, offset))?;
             if table.offset != offset {
-                return Err(Error::Ddc(ErrorCode::InvalidOffset))
+                return Err(ErrorCode::InvalidOffset.into())
             } else if table.bytes().is_empty() {
                 break
             }
@@ -216,9 +272,7 @@ impl<I: i2c::Address + i2c::ReadWrite> Ddc<I> {
         Ok(value)
     }
 
-    /// Write a table value to the device.
-    pub fn table_write(&mut self, code: commands::FeatureCode, value: &[u8]) -> Result<(), Error<I::Error>> {
-        let mut offset = 0;
+    fn table_write(&mut self, code: FeatureCode, mut offset: u16, value: &[u8]) -> Result<(), Self::Error> {
         for chunk in value.chunks(32) {
             self.execute(commands::TableWrite::new(code, offset, chunk))?;
             offset += chunk.len() as u16;
@@ -226,30 +280,13 @@ impl<I: i2c::Address + i2c::ReadWrite> Ddc<I> {
 
         Ok(())
     }
+}
 
-    fn checksum<II: IntoIterator<Item=u8>>(iter: II) -> u8 {
-        iter.into_iter().fold(0u8, |sum, v| sum ^ v)
-    }
-
-    /// Execute a DDC/CI command. See the `commands` module for all available
-    /// commands. The return type is dependent on the executed command.
-    ///
-    /// # Example
-    ///
-    /// ```rust,no_run
-    /// use ddc::{Ddc, commands};
-    ///
-    /// # #[cfg(feature = "i2c-linux")] fn ddc() {
-    /// let mut ddc = Ddc::from_path("/dev/i2c-4").unwrap();
-    /// let input = ddc.execute(commands::GetVcpFeature::new(0x60)).unwrap();
-    /// println!("Monitor input: {:?}", input.value());
-    /// # }
-    ///
-    /// ```
-    pub fn execute<C: Command>(&mut self, command: C) -> Result<C::Ok, Error<I::Error>> {
+impl<D: DdcCommandRawMarker> DdcCommand for D where D::Error: From<ErrorCode> {
+    fn execute<C: Command>(&mut self, command: C) -> Result<C::Ok, Self::Error> {
         //let mut data = [0u8; C::MAX_LEN]; // TODO: once associated consts work...
         let mut data = [0u8; 36];
-        command.encode(&mut data).map_err(Error::Ddc)?;
+        command.encode(&mut data)?;
 
         //let mut out = [0u8; C::Ok::MAX_LEN + 3]; // TODO: once associated consts work...
         let mut out = [0u8; 36 + 3]; let out = &mut out[..C::Ok::MAX_LEN + 3];
@@ -260,11 +297,11 @@ impl<I: i2c::Address + i2c::ReadWrite> Ddc<I> {
         );
         let res = match res {
             Ok(res) => {
-                self.delay = Delay::new(Duration::from_millis(C::DELAY_COMMAND_MS));
+                self.set_sleep_delay(Delay::new(Duration::from_millis(C::DELAY_COMMAND_MS)));
                 res
             },
             Err(e) => {
-                self.delay = Delay::new(Duration::from_millis(DELAY_COMMAND_FAILED_MS));
+                self.set_sleep_delay(Delay::new(Duration::from_millis(DELAY_COMMAND_FAILED_MS)));
                 return Err(e)
             },
         };
@@ -272,97 +309,9 @@ impl<I: i2c::Address + i2c::ReadWrite> Ddc<I> {
         let res = C::Ok::decode(res);
 
         if res.is_err() {
-            self.delay = Delay::new(Duration::from_millis(DELAY_COMMAND_FAILED_MS));
+            self.set_sleep_delay(Delay::new(Duration::from_millis(DELAY_COMMAND_FAILED_MS)));
         }
 
-        res.map_err(Error::Ddc)
-    }
-
-    fn encode_command<'a>(data: &[u8], packet: &'a mut [u8]) -> &'a [u8] {
-        packet[0] = SUB_ADDRESS_DDC_CI;
-        packet[1] = 0x80 | data.len() as u8;
-        packet[2..2 + data.len()].copy_from_slice(data);
-        packet[2 + data.len()] = Self::checksum(
-            iter::once((I2C_ADDRESS_DDC_CI as u8) << 1)
-            .chain(packet[..2 + data.len()].iter().cloned())
-        );
-
-        &packet[..3 + data.len()]
-    }
-
-    fn execute_raw<'a>(&mut self, data: &[u8], out: &'a mut [u8], response_delay: Duration) -> Result<&'a mut [u8], Error<I::Error>> {
-        assert!(data.len() <= 36);
-
-        let mut packet = [0u8; 36 + 3];
-        let packet = Self::encode_command(data, &mut packet);
-        self.inner.set_slave_address(I2C_ADDRESS_DDC_CI, false)?;
-
-        let full_len = {
-            self.sleep();
-            self.inner.i2c_write(packet)?;
-            if !out.is_empty() {
-                sleep(response_delay);
-                self.inner.i2c_read(out)?
-            } else {
-                return Ok(out)
-            }
-        };
-
-        if full_len < 2 {
-            return Err(Error::Ddc(ErrorCode::InvalidLength.into()))
-        }
-
-        let len = (out[1] & 0x7f) as usize;
-
-        if out[1] & 0x80 == 0 {
-            // TODO: apparently sometimes this isn't true?
-            return Err(Error::Ddc(ErrorCode::Invalid("Expected DDC/CI length bit".into())))
-        }
-
-        if full_len < len + 2 {
-            return Err(Error::Ddc(ErrorCode::InvalidLength))
-        }
-
-        let checksum = Self::checksum(
-            iter::once(((I2C_ADDRESS_DDC_CI as u8) << 1) | 1)
-            .chain(iter::once(SUB_ADDRESS_DDC_CI))
-            .chain(out[1..2 + len].iter().cloned())
-        );
-
-        if out[2 + len] != checksum {
-            return Err(Error::Ddc(ErrorCode::InvalidChecksum))
-        }
-
-        Ok(&mut out[2..2 + len])
-    }
-}
-
-#[derive(Clone, Debug)]
-struct Delay {
-    time: Option<Instant>,
-    delay: Duration,
-}
-
-impl Delay {
-    fn new(delay: Duration) -> Self {
-        Delay {
-            time: Some(Instant::now()),
-            delay: delay,
-        }
-    }
-
-    fn sleep(&mut self) {
-        if let Some(delay) = self.time.take().and_then(|time| self.delay.checked_sub(time.elapsed())) {
-            sleep(delay);
-        }
-    }
-}
-
-impl Default for Delay {
-    fn default() -> Self {
-        Delay {
-            time: None,
-            delay: Default::default(),
-        }
+        res.map_err(From::from)
     }
 }

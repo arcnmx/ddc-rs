@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 use std::{mem, fmt};
-use ErrorCode;
+use {ErrorCode, FeatureCode, VcpValue};
 
 pub trait Command {
     type Ok: CommandResult;
@@ -86,36 +86,6 @@ impl Command for SetVcpFeature {
     }
 }
 
-pub type FeatureCode = u8;
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct VcpValue {
-    pub kind: u8,
-    pub mh: u8,
-    pub ml: u8,
-    pub sh: u8,
-    pub sl: u8,
-}
-
-impl VcpValue {
-    pub fn value(&self) -> u16 {
-        ((self.sh as u16) << 8) | self.sl as u16
-    }
-
-    pub fn maximum(&self) -> u16 {
-        ((self.mh as u16) << 8) | self.ml as u16
-    }
-}
-
-impl fmt::Debug for VcpValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("VcpValue")
-            .field("maximum", &self.maximum())
-            .field("value", &self.value())
-            .finish()
-    }
-}
-
 impl CommandResult for VcpValue {
     const MAX_LEN: usize = 8;
 
@@ -137,7 +107,7 @@ impl CommandResult for VcpValue {
         // data[2] == vcp code from request
 
         Ok(VcpValue {
-            kind: data[2],
+            ty: data[2],
             mh: data[6],
             ml: data[7],
             sh: data[4],

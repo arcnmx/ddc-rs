@@ -14,9 +14,9 @@ cache:
   - target
 env:
   matrix:
-  - CARGO_FEATURES=
-  - CARGO_FEATURES=i2c-linux
-  - CARGO_FEATURES="i2c-linux udev"
+  - CARGO_FEATURES=i2c
+  - CARGO_FEATURES="i2c i2c-linux"
+  - CARGO_FEATURES="i2c i2c-linux udev"
   global:
   - CARGO_QUIET=
   - CARGO_INCREMENTAL=0
@@ -33,7 +33,7 @@ deploy:
   on:
     tags: true
     all_branches: true
-    condition: "$TRAVIS_RUST_VERSION = stable && $CARGO_FEATURES = 'i2c-linux udev'"
+    condition: "$TRAVIS_RUST_VERSION = stable && $CARGO_FEATURES = 'i2c i2c-linux udev'"
 before_deploy:
 - cargo doc
 - cargo package
