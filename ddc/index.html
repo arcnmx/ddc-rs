@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `ddc` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, ddc">
+
+    <title>ddc - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Crate ddc</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#reexports">Reexports</a></li><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#constants">Constants</a></li><li><a href="#traits">Traits</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'ddc', ty: 'mod', relpath: '../'};</script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Crate <a class="mod" href=''>ddc</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../src/ddc/lib.rs.html#1-291' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Control displays using the DDC/CI protocol.</p>
+
+<p>Provides generic traits and utilities for working with DDC. See <a href="https://crates.io/crates/ddc/reverse_dependencies">downstream
+crates</a> for usable
+concrete implementations.</p>
+</div><h2 id='reexports' class='section-header'><a href="#reexports">Reexports</a></h2>
+<table><tr><td><code>pub use commands::<a class="trait" href="../ddc/commands/trait.Command.html" title="trait ddc::commands::Command">Command</a>;</code></td></tr><tr><td><code>pub use commands::<a class="trait" href="../ddc/commands/trait.CommandResult.html" title="trait ddc::commands::CommandResult">CommandResult</a>;</code></td></tr><tr><td><code>pub use commands::<a class="struct" href="../ddc/commands/struct.TimingMessage.html" title="struct ddc::commands::TimingMessage">TimingMessage</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="commands/index.html"
+                                  title='mod ddc::commands'>commands</a></td>
+                           <td class='docblock-short'>
+                                <p>DDC/CI command request and response types.</p>
+                           </td>
+                       </tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Delay.html"
+                                  title='struct ddc::Delay'>Delay</a></td>
+                           <td class='docblock-short'>
+                                <p>A type that can help with implementing the DDC specificationed delays.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.VcpValue.html"
+                                  title='struct ddc::VcpValue'>VcpValue</a></td>
+                           <td class='docblock-short'>
+                                <p>VCP Value</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.ErrorCode.html"
+                                  title='enum ddc::ErrorCode'>ErrorCode</a></td>
+                           <td class='docblock-short'>
+                                <p>DDC/CI protocol errors</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.VcpValueType.html"
+                                  title='enum ddc::VcpValueType'>VcpValueType</a></td>
+                           <td class='docblock-short'>
+                                <p>VCP feature type.</p>
+                           </td>
+                       </tr></table><h2 id='constants' class='section-header'><a href="#constants">Constants</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DELAY_COMMAND_FAILED_MS.html"
+                                  title='constant ddc::DELAY_COMMAND_FAILED_MS'>DELAY_COMMAND_FAILED_MS</a></td>
+                           <td class='docblock-short'>
+                                <p>DDC delay required before retrying a request</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.I2C_ADDRESS_DDC_CI.html"
+                                  title='constant ddc::I2C_ADDRESS_DDC_CI'>I2C_ADDRESS_DDC_CI</a></td>
+                           <td class='docblock-short'>
+                                <p>DDC/CI command and control I2C address</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.I2C_ADDRESS_EDID.html"
+                                  title='constant ddc::I2C_ADDRESS_EDID'>I2C_ADDRESS_EDID</a></td>
+                           <td class='docblock-short'>
+                                <p>EDID EEPROM I2C address</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.I2C_ADDRESS_EDID_SEGMENT.html"
+                                  title='constant ddc::I2C_ADDRESS_EDID_SEGMENT'>I2C_ADDRESS_EDID_SEGMENT</a></td>
+                           <td class='docblock-short'>
+                                <p>E-DDC EDID segment register I2C address</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SUB_ADDRESS_DDC_CI.html"
+                                  title='constant ddc::SUB_ADDRESS_DDC_CI'>SUB_ADDRESS_DDC_CI</a></td>
+                           <td class='docblock-short'>
+                                <p>DDC sub-address command prefix</p>
+                           </td>
+                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.Ddc.html"
+                                  title='trait ddc::Ddc'>Ddc</a></td>
+                           <td class='docblock-short'>
+                                <p>A high level interface to DDC commands.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.DdcCommand.html"
+                                  title='trait ddc::DdcCommand'>DdcCommand</a></td>
+                           <td class='docblock-short'>
+                                <p>A (slightly) higher level interface to <code>DdcCommandRaw</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.DdcCommandMarker.html"
+                                  title='trait ddc::DdcCommandMarker'>DdcCommandMarker</a></td>
+                           <td class='docblock-short'>
+                                <p>Using this marker trait will automatically implement the <code>Ddc</code> and <code>DdcTable</code>
+traits.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.DdcCommandRaw.html"
+                                  title='trait ddc::DdcCommandRaw'>DdcCommandRaw</a></td>
+                           <td class='docblock-short'>
+                                <p>Allows the execution of arbitrary low level DDC commands.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.DdcCommandRawMarker.html"
+                                  title='trait ddc::DdcCommandRawMarker'>DdcCommandRawMarker</a></td>
+                           <td class='docblock-short'>
+                                <p>Using this marker trait will automatically implement the <code>DdcCommand</code> trait.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.DdcHost.html"
+                                  title='trait ddc::DdcHost'>DdcHost</a></td>
+                           <td class='docblock-short'>
+                                <p>A DDC host is able to communicate with a DDC device such as a display.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.DdcTable.html"
+                                  title='trait ddc::DdcTable'>DdcTable</a></td>
+                           <td class='docblock-short'>
+                                <p>Table commands can read and write arbitrary binary data to a VCP feature.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.Eddc.html"
+                                  title='trait ddc::Eddc'>Eddc</a></td>
+                           <td class='docblock-short'>
+                                <p>E-DDC allows reading extensions of Enhanced EDID.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.Edid.html"
+                                  title='trait ddc::Edid'>Edid</a></td>
+                           <td class='docblock-short'>
+                                <p>A trait that allows retrieving Extended Display Identification Data (EDID)
+from a device.</p>
+                           </td>
+                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="type" href="type.FeatureCode.html"
+                                  title='type ddc::FeatureCode'>FeatureCode</a></td>
+                           <td class='docblock-short'>
+                                <p>VCP feature code</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "ddc";
+    </script>
+    <script src="../main.js"></script>
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["CapabilitiesReply",""],["CapabilitiesRequest",""],["GetTimingReport",""],["GetVcpFeature",""],["SaveCurrentSettings",""],["SetVcpFeature",""],["TableRead",""],["TableResponse",""],["TableWrite",""],["TimingMessage",""]],"trait":[["Command",""],["CommandResult",""]]});
