@@ -4,6 +4,19 @@
 
 `ddc` is a Rust crate for controlling monitors with [DDC/CI](https://en.wikipedia.org/wiki/Display_Data_Channel).
 
+## Implementations
+
+`ddc` only provides traits for working with DDC, and these must be implemented
+with an underlying backend in order to be used. The following crates may be
+helpful:
+
+- [ddc-i2c](https://crates.io/crates/ddc-i2c) supports DDC using an I2C capable
+  master - in particular Linux's i2c-dev.
+- [ddc-winapi](https://crates.io/crates/ddc-winapi) implements DDC using the
+  Windows API. It is more limited than the generic I2C interface, and cannot be
+  used to read monitor EDID info.
+- [Any other downstream crates](https://crates.io/crates/ddc/reverse_dependencies)
+
 ## [Documentation][docs]
 
 See the [documentation][docs] for up to date information. The [examples](examples/)
