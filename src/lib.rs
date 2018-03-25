@@ -3,49 +3,23 @@
 
 //! Control displays using the DDC/CI protocol.
 //!
-//! # Example
-//!
-//! ```rust,no_run
-//! use ddc::Ddc;
-//!
-//! # #[cfg(feature = "i2c-linux")] fn ddc() {
-//! let mut ddc = ddc::from_i2c_device("/dev/i2c-4").unwrap();
-//! let mccs_version = ddc.get_vcp_feature(0xdf).unwrap();
-//! println!("MCCS version: {:04x}", mccs_version.maximum());
-//! # }
-//! ```
+//! Provides generic traits and utilities for working with DDC. See [downstream
+//! crates](https://crates.io/crates/ddc/reverse_dependencies) for usable
+//! concrete implementations.
 
-extern crate resize_slice;
 extern crate mccs;
-#[cfg(feature = "i2c-linux")]
-extern crate i2c_linux;
-#[cfg(feature = "i2c")]
-extern crate i2c;
 
 use std::{iter, fmt, error};
 use std::time::Duration;
 
-pub use mccs::{FeatureCode, Value as VcpValue};
+pub use mccs::{FeatureCode, Value as VcpValue, ValueType as VcpValueType};
 
 /// DDC/CI command request and response types.
 pub mod commands;
 pub use commands::{Command, CommandResult, TimingMessage};
 
-#[cfg(all(feature = "udev", feature = "i2c-linux"))]
-mod enumerate;
-
-#[cfg(all(feature = "udev", feature = "i2c-linux"))]
-pub use enumerate::Enumerator;
-
 mod delay;
 pub use delay::Delay;
-
-#[cfg(feature = "i2c")]
-mod i2c_ddc;
-#[cfg(feature = "i2c")]
-pub use i2c_ddc::I2cDdc;
-#[cfg(feature = "i2c-linux")]
-pub use i2c_ddc::{I2cDeviceDdc, from_i2c_device};
 
 /// EDID EEPROM I2C address
 pub const I2C_ADDRESS_EDID: u16 = 0x50;
