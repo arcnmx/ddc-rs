@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["arcnmx"]
 
 description = "DDC/CI monitor control"
-keywords = ["ddc/ci", "mccs", "vcp", "vesa"]
+keywords = ["ddc", "mccs", "vcp", "vesa"]
 
 documentation = "http://arcnmx.github.io/ddc-rs/ddc"
 repository = "https://github.com/arcnmx/ddc-rs"
