@@ -1,6 +1,6 @@
 [package]
 name = "ddc"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["arcnmx"]
 
 description = "DDC/CI monitor control"
@@ -16,4 +16,4 @@ travis-ci = { repository = "arcnmx/ddc-rs" }
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-mccs = "~0.0.2"
+mccs = "^0.1.0"
