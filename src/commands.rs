@@ -108,10 +108,10 @@ impl CommandResult for VcpValue {
 
         Ok(VcpValue {
             ty: data[2],
-            mh: data[6],
-            ml: data[7],
-            sh: data[4],
-            sl: data[5],
+            mh: data[4],
+            ml: data[5],
+            sh: data[6],
+            sl: data[7],
         })
     }
 }
