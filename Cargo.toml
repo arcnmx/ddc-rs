@@ -1,6 +1,6 @@
 [package]
 name = "ddc"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["arcnmx"]
 
 description = "DDC/CI monitor control"
