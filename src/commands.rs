@@ -369,8 +369,12 @@ impl CommandResult for TimingMessage {
 impl CommandResult for () {
     const MAX_LEN: usize = 0;
 
-    fn decode(_data: &[u8]) -> Result<Self, ErrorCode> {
-        unreachable!()
+    fn decode(data: &[u8]) -> Result<Self, ErrorCode> {
+        if data.is_empty() {
+            Ok(())
+        } else {
+            Err(ErrorCode::InvalidLength)
+        }
     }
 }
 

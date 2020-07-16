@@ -263,7 +263,11 @@ impl<D: DdcCommandRawMarker> DdcCommand for D where D::Error: From<ErrorCode> {
         command.encode(&mut data)?;
 
         //let mut out = [0u8; C::Ok::MAX_LEN + 3]; // TODO: once associated consts work...
-        let mut out = [0u8; 36 + 3]; let out = &mut out[..C::Ok::MAX_LEN + 3];
+        let mut out = [0u8; 36 + 3]; let out = if C::Ok::MAX_LEN > 0 {
+            &mut out[..C::Ok::MAX_LEN + 3]
+        } else {
+            &mut []
+        };
         let res = self.execute_raw(
             &data[..command.len()],
             out,
