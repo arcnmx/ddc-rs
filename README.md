@@ -19,8 +19,7 @@ helpful:
 
 ## [Documentation][docs]
 
-See the [documentation][docs] for up to date information. The [examples](examples/)
-are a good place to start.
+See the [documentation][docs] for up to date information.
 
 [release-badge]: https://img.shields.io/crates/v/ddc.svg?style=flat-square
 [cargo]: https://crates.io/crates/ddc
