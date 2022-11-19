@@ -15,7 +15,7 @@ impl Delay {
     pub fn new(delay: Duration) -> Self {
         Delay {
             time: Some(Instant::now()),
-            delay: delay,
+            delay,
         }
     }
 

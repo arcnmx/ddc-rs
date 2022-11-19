@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 use {
+    crate::{ErrorCode, FeatureCode, VcpValue},
     std::{fmt, mem},
-    ErrorCode, FeatureCode, VcpValue,
 };
 
 pub trait Command {

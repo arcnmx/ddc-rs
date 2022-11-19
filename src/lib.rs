@@ -1,5 +1,5 @@
 #![deny(missing_docs)]
-#![doc(html_root_url = "https://docs.rs/ddc/0.2.2/")]
+#![doc(html_root_url = "https://docs.rs/ddc/0.3.0/")]
 
 //! Control displays using the DDC/CI protocol.
 //!
@@ -181,22 +181,18 @@ pub enum ErrorCode {
     Invalid(String),
 }
 
-impl error::Error for ErrorCode {
-    fn description(&self) -> &str {
-        match *self {
+impl error::Error for ErrorCode {}
+
+impl fmt::Display for ErrorCode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(match *self {
             ErrorCode::InvalidOffset => "invalid offset returned from DDC/CI",
             ErrorCode::InvalidLength => "invalid DDC/CI length",
             ErrorCode::InvalidChecksum => "DDC/CI checksum mismatch",
             ErrorCode::InvalidOpcode => "DDC/CI VCP opcode mismatch",
             ErrorCode::InvalidData => "invalid DDC/CI data",
             ErrorCode::Invalid(ref s) => s,
-        }
-    }
-}
-
-impl fmt::Display for ErrorCode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", error::Error::description(self))
+        })
     }
 }
 

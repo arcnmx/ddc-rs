@@ -1,7 +1,8 @@
 [package]
 name = "ddc"
-version = "0.2.2" # keep in sync with html_root_url
+version = "0.3.0" # keep in sync with html_root_url
 authors = ["arcnmx"]
+edition = "2021"
 
 description = "DDC/CI monitor control"
 keywords = ["ddc", "mccs", "vcp", "vesa"]
