@@ -1,6 +1,8 @@
 #![allow(missing_docs)]
-use std::{mem, fmt};
-use {ErrorCode, FeatureCode, VcpValue};
+use {
+    std::{fmt, mem},
+    ErrorCode, FeatureCode, VcpValue,
+};
 
 pub trait Command {
     type Ok: CommandResult;
@@ -26,20 +28,22 @@ pub struct GetVcpFeature {
 
 impl GetVcpFeature {
     pub fn new(code: FeatureCode) -> Self {
-        GetVcpFeature {
-            code: code,
-        }
+        GetVcpFeature { code }
     }
 }
 
 impl Command for GetVcpFeature {
     type Ok = VcpValue;
-    const MIN_LEN: usize = 2;
-    const MAX_LEN: usize = 2;
-    const DELAY_RESPONSE_MS: u64 = 40;
-    const DELAY_COMMAND_MS: u64 = 50; // the spec omits this, but 50 corresponds with what all other commands suggest
 
-    fn len(&self) -> usize { 2 }
+    // the spec omits this, but 50 corresponds with what all other commands suggest
+    const DELAY_COMMAND_MS: u64 = 50;
+    const DELAY_RESPONSE_MS: u64 = 40;
+    const MAX_LEN: usize = 2;
+    const MIN_LEN: usize = 2;
+
+    fn len(&self) -> usize {
+        2
+    }
 
     fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 2);
@@ -58,21 +62,21 @@ pub struct SetVcpFeature {
 
 impl SetVcpFeature {
     pub fn new(code: FeatureCode, value: u16) -> Self {
-        SetVcpFeature {
-            code: code,
-            value: value,
-        }
+        SetVcpFeature { code, value }
     }
 }
 
 impl Command for SetVcpFeature {
     type Ok = ();
-    const MIN_LEN: usize = 4;
-    const MAX_LEN: usize = 4;
-    const DELAY_RESPONSE_MS: u64 = 0;
-    const DELAY_COMMAND_MS: u64 = 50;
 
-    fn len(&self) -> usize { 4 }
+    const DELAY_COMMAND_MS: u64 = 50;
+    const DELAY_RESPONSE_MS: u64 = 0;
+    const MAX_LEN: usize = 4;
+    const MIN_LEN: usize = 4;
+
+    fn len(&self) -> usize {
+        4
+    }
 
     fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 4);
@@ -99,7 +103,8 @@ impl CommandResult for VcpValue {
         }
 
         match data[1] {
-            0x00 => (), // NoError
+            // NoError
+            0x00 => (),
             0x01 => return Err(ErrorCode::Invalid("Unsupported VCP code".into())),
             rc => return Err(ErrorCode::Invalid(format!("Unrecognized VCP error code 0x{:02x}", rc))),
         }
@@ -121,12 +126,15 @@ pub struct SaveCurrentSettings;
 
 impl Command for SaveCurrentSettings {
     type Ok = ();
-    const MIN_LEN: usize = 1;
-    const MAX_LEN: usize = 1;
-    const DELAY_RESPONSE_MS: u64 = 0;
-    const DELAY_COMMAND_MS: u64 = 200;
 
-    fn len(&self) -> usize { 1 }
+    const DELAY_COMMAND_MS: u64 = 200;
+    const DELAY_RESPONSE_MS: u64 = 0;
+    const MAX_LEN: usize = 1;
+    const MIN_LEN: usize = 1;
+
+    fn len(&self) -> usize {
+        1
+    }
 
     fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 1);
@@ -145,22 +153,22 @@ pub struct TableWrite<'a> {
 
 impl<'a> TableWrite<'a> {
     pub fn new(code: FeatureCode, offset: u16, data: &'a [u8]) -> Self {
-        TableWrite {
-            code: code,
-            offset: offset,
-            data: data,
-        }
+        TableWrite { code, offset, data }
     }
 }
 
 impl<'a> Command for TableWrite<'a> {
     type Ok = ();
-    const MIN_LEN: usize = 4;
-    const MAX_LEN: usize = 4 + 32; // Spec says this should be 3~35 but allows 32 bytes of data transfer?? how?? What does "P=1" mean?
-    const DELAY_RESPONSE_MS: u64 = 0;
-    const DELAY_COMMAND_MS: u64 = 50;
 
-    fn len(&self) -> usize { 4 + self.data.len() }
+    const DELAY_COMMAND_MS: u64 = 50;
+    const DELAY_RESPONSE_MS: u64 = 0;
+    // Spec says this should be 3~35 but allows 32 bytes of data transfer?? how?? What does "P=1" mean?
+    const MAX_LEN: usize = 4 + 32;
+    const MIN_LEN: usize = 4;
+
+    fn len(&self) -> usize {
+        4 + self.data.len()
+    }
 
     fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 4 + self.data.len());
@@ -184,21 +192,21 @@ pub struct TableRead {
 
 impl TableRead {
     pub fn new(code: FeatureCode, offset: u16) -> Self {
-        TableRead {
-            code: code,
-            offset: offset,
-        }
+        TableRead { code, offset }
     }
 }
 
 impl Command for TableRead {
     type Ok = TableResponse;
-    const MIN_LEN: usize = 4;
-    const MAX_LEN: usize = 4;
-    const DELAY_RESPONSE_MS: u64 = 40;
-    const DELAY_COMMAND_MS: u64 = 50;
 
-    fn len(&self) -> usize { 4 }
+    const DELAY_COMMAND_MS: u64 = 50;
+    const DELAY_RESPONSE_MS: u64 = 40;
+    const MAX_LEN: usize = 4;
+    const MIN_LEN: usize = 4;
+
+    fn len(&self) -> usize {
+        4
+    }
 
     fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 4);
@@ -219,20 +227,21 @@ pub struct CapabilitiesRequest {
 
 impl CapabilitiesRequest {
     pub fn new(offset: u16) -> Self {
-        CapabilitiesRequest {
-            offset: offset,
-        }
+        CapabilitiesRequest { offset }
     }
 }
 
 impl Command for CapabilitiesRequest {
     type Ok = CapabilitiesReply;
-    const MIN_LEN: usize = 3;
-    const MAX_LEN: usize = 3;
-    const DELAY_RESPONSE_MS: u64 = 40;
-    const DELAY_COMMAND_MS: u64 = 50;
 
-    fn len(&self) -> usize { 3 }
+    const DELAY_COMMAND_MS: u64 = 50;
+    const DELAY_RESPONSE_MS: u64 = 40;
+    const MAX_LEN: usize = 3;
+    const MIN_LEN: usize = 3;
+
+    fn len(&self) -> usize {
+        3
+    }
 
     fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 3);
@@ -277,7 +286,8 @@ impl CommandResult for TableResponse {
     const MAX_LEN: usize = 36;
 
     fn decode(data: &[u8]) -> Result<Self, ErrorCode> {
-        if data.len() < 4 || data.len() > 36  { // spec says 3 - 35???
+        // spec says 3 - 35???
+        if data.len() < 4 || data.len() > 36 {
             return Err(ErrorCode::InvalidLength)
         }
 
@@ -304,7 +314,7 @@ impl CommandResult for CapabilitiesReply {
     const MAX_LEN: usize = 35;
 
     fn decode(data: &[u8]) -> Result<Self, ErrorCode> {
-        if data.len() < 3 || data.len() > 35  {
+        if data.len() < 3 || data.len() > 35 {
             return Err(ErrorCode::InvalidLength)
         }
 
@@ -324,12 +334,15 @@ pub struct GetTimingReport;
 
 impl Command for GetTimingReport {
     type Ok = TimingMessage;
-    const MIN_LEN: usize = 1;
-    const MAX_LEN: usize = 1;
-    const DELAY_RESPONSE_MS: u64 = 40;
-    const DELAY_COMMAND_MS: u64 = 50;
 
-    fn len(&self) -> usize { 1 }
+    const DELAY_COMMAND_MS: u64 = 50;
+    const DELAY_RESPONSE_MS: u64 = 40;
+    const MAX_LEN: usize = 1;
+    const MIN_LEN: usize = 1;
+
+    fn len(&self) -> usize {
+        1
+    }
 
     fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         assert!(data.len() >= 1);
@@ -380,12 +393,15 @@ impl CommandResult for () {
 
 impl<'a, C: Command> Command for &'a C {
     type Ok = C::Ok;
-    const MIN_LEN: usize = C::MIN_LEN;
-    const MAX_LEN: usize = C::MAX_LEN;
-    const DELAY_RESPONSE_MS: u64 = C::DELAY_RESPONSE_MS;
-    const DELAY_COMMAND_MS: u64 = C::DELAY_COMMAND_MS;
 
-    fn len(&self) -> usize { (*self).len() }
+    const DELAY_COMMAND_MS: u64 = C::DELAY_COMMAND_MS;
+    const DELAY_RESPONSE_MS: u64 = C::DELAY_RESPONSE_MS;
+    const MAX_LEN: usize = C::MAX_LEN;
+    const MIN_LEN: usize = C::MIN_LEN;
+
+    fn len(&self) -> usize {
+        (*self).len()
+    }
 
     fn encode(&self, data: &mut [u8]) -> Result<usize, ErrorCode> {
         (*self).encode(data)

@@ -1,5 +1,7 @@
-use std::thread::sleep;
-use std::time::{Instant, Duration};
+use std::{
+    thread::sleep,
+    time::{Duration, Instant},
+};
 
 /// A type that can help with implementing the DDC specificationed delays.
 #[derive(Clone, Debug)]
@@ -19,7 +21,10 @@ impl Delay {
 
     /// The time remaining in this delay.
     pub fn remaining(&self) -> Duration {
-        self.time.as_ref().and_then(|time| self.delay.checked_sub(time.elapsed())).unwrap_or(Duration::default())
+        self.time
+            .as_ref()
+            .and_then(|time| self.delay.checked_sub(time.elapsed()))
+            .unwrap_or(Duration::default())
     }
 
     /// Waits out the remaining time in this delay.

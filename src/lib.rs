@@ -9,17 +9,18 @@
 
 extern crate mccs;
 
-use std::{iter, fmt, error};
-use std::time::Duration;
-
-pub use mccs::{FeatureCode, Value as VcpValue, ValueType as VcpValueType};
+use std::{error, fmt, iter, time::Duration};
+pub use {
+    self::{
+        commands::{Command, CommandResult, TimingMessage},
+        delay::Delay,
+    },
+    mccs::{FeatureCode, Value as VcpValue, ValueType as VcpValueType},
+};
 
 /// DDC/CI command request and response types.
 pub mod commands;
-pub use commands::{Command, CommandResult, TimingMessage};
-
 mod delay;
-pub use delay::Delay;
 
 /// EDID EEPROM I2C address
 pub const I2C_ADDRESS_EDID: u16 = 0x50;
@@ -68,7 +69,7 @@ pub trait DdcHost {
     /// internally and shouldn't need to be called manually unless synchronizing
     /// with an external process or another handle to the same device. It may
     /// however be desireable to run this before program exit.
-    fn sleep(&mut self) { }
+    fn sleep(&mut self) {}
 }
 
 /// Allows the execution of arbitrary low level DDC commands.
@@ -78,11 +79,19 @@ pub trait DdcCommandRaw: DdcHost {
     /// A response should not be read unless `out` is not empty, and the delay
     /// should occur in between any write and read made to the device. A subslice
     /// of `out` excluding DDC packet headers should be returned.
-    fn execute_raw<'a>(&mut self, data: &[u8], out: &'a mut [u8], response_delay: Duration) -> Result<&'a mut [u8], Self::Error>;
+    fn execute_raw<'a>(
+        &mut self,
+        data: &[u8],
+        out: &'a mut [u8],
+        response_delay: Duration,
+    ) -> Result<&'a mut [u8], Self::Error>;
 }
 
 /// Using this marker trait will automatically implement the `DdcCommand` trait.
-pub trait DdcCommandRawMarker: DdcCommandRaw where Self::Error: From<ErrorCode> {
+pub trait DdcCommandRawMarker: DdcCommandRaw
+where
+    Self::Error: From<ErrorCode>,
+{
     /// Sets an internal `Delay` that must expire before the next command is
     /// attempted.
     fn set_sleep_delay(&mut self, delay: Delay);
@@ -98,7 +107,7 @@ pub trait DdcCommand: DdcHost {
     fn execute<C: Command>(&mut self, command: C) -> Result<C::Ok, Self::Error>;
 
     /// Computes a DDC/CI packet checksum
-    fn checksum<II: IntoIterator<Item=u8>>(iter: II) -> u8 {
+    fn checksum<II: IntoIterator<Item = u8>>(iter: II) -> u8 {
         iter.into_iter().fold(0u8, |sum, v| sum ^ v)
     }
 
@@ -109,10 +118,8 @@ pub trait DdcCommand: DdcHost {
         packet[0] = SUB_ADDRESS_DDC_CI;
         packet[1] = 0x80 | data.len() as u8;
         packet[2..2 + data.len()].copy_from_slice(data);
-        packet[2 + data.len()] = Self::checksum(
-            iter::once((I2C_ADDRESS_DDC_CI as u8) << 1)
-            .chain(packet[..2 + data.len()].iter().cloned())
-        );
+        packet[2 + data.len()] =
+            Self::checksum(iter::once((I2C_ADDRESS_DDC_CI as u8) << 1).chain(packet[..2 + data.len()].iter().cloned()));
 
         &packet[..3 + data.len()]
     }
@@ -120,7 +127,11 @@ pub trait DdcCommand: DdcHost {
 
 /// Using this marker trait will automatically implement the `Ddc` and `DdcTable`
 /// traits.
-pub trait DdcCommandMarker: DdcCommand where Self::Error: From<ErrorCode> { }
+pub trait DdcCommandMarker: DdcCommand
+where
+    Self::Error: From<ErrorCode>,
+{
+}
 
 /// A high level interface to DDC commands.
 pub trait Ddc: DdcHost {
@@ -189,7 +200,10 @@ impl fmt::Display for ErrorCode {
     }
 }
 
-impl<D: DdcCommandMarker> Ddc for D where D::Error: From<ErrorCode> {
+impl<D: DdcCommandMarker> Ddc for D
+where
+    D::Error: From<ErrorCode>,
+{
     fn capabilities_string(&mut self) -> Result<Vec<u8>, Self::Error> {
         let mut string = Vec::new();
         let mut offset = 0;
@@ -226,7 +240,10 @@ impl<D: DdcCommandMarker> Ddc for D where D::Error: From<ErrorCode> {
     }
 }
 
-impl<D: DdcCommandMarker> DdcTable for D where D::Error: From<ErrorCode> {
+impl<D: DdcCommandMarker> DdcTable for D
+where
+    D::Error: From<ErrorCode>,
+{
     fn table_read(&mut self, code: FeatureCode) -> Result<Vec<u8>, Self::Error> {
         let mut value = Vec::new();
         let mut offset = 0;
@@ -256,14 +273,20 @@ impl<D: DdcCommandMarker> DdcTable for D where D::Error: From<ErrorCode> {
     }
 }
 
-impl<D: DdcCommandRawMarker> DdcCommand for D where D::Error: From<ErrorCode> {
+impl<D: DdcCommandRawMarker> DdcCommand for D
+where
+    D::Error: From<ErrorCode>,
+{
     fn execute<C: Command>(&mut self, command: C) -> Result<C::Ok, Self::Error> {
-        //let mut data = [0u8; C::MAX_LEN]; // TODO: once associated consts work...
+        // TODO: once associated consts work...
+        //let mut data = [0u8; C::MAX_LEN];
         let mut data = [0u8; 36];
         command.encode(&mut data)?;
 
-        //let mut out = [0u8; C::Ok::MAX_LEN + 3]; // TODO: once associated consts work...
-        let mut out = [0u8; 36 + 3]; let out = if C::Ok::MAX_LEN > 0 {
+        // TODO: once associated consts work...
+        //let mut out = [0u8; C::Ok::MAX_LEN + 3];
+        let mut out = [0u8; 36 + 3];
+        let out = if C::Ok::MAX_LEN > 0 {
             &mut out[..C::Ok::MAX_LEN + 3]
         } else {
             &mut []
@@ -271,7 +294,7 @@ impl<D: DdcCommandRawMarker> DdcCommand for D where D::Error: From<ErrorCode> {
         let res = self.execute_raw(
             &data[..command.len()],
             out,
-            Duration::from_millis(C::DELAY_RESPONSE_MS as _)
+            Duration::from_millis(C::DELAY_RESPONSE_MS as _),
         );
         let res = match res {
             Ok(res) => {
