@@ -1,18 +1,18 @@
 [package]
 name = "ddc"
-version = "0.2.2"
+version = "0.2.2" # keep in sync with html_root_url
 authors = ["arcnmx"]
 
 description = "DDC/CI monitor control"
 keywords = ["ddc", "mccs", "vcp", "vesa"]
+categories = ["hardware-support"]
 
-documentation = "http://arcnmx.github.io/ddc-rs/ddc"
+documentation = "https://docs.rs/ddc/"
 repository = "https://github.com/arcnmx/ddc-rs"
 readme = "README.md"
 license = "MIT"
 
 [badges]
-travis-ci = { repository = "arcnmx/ddc-rs" }
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
