@@ -23,4 +23,4 @@ include = [
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-mccs = "0.1"
+mccs = "0.2"
