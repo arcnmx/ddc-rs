@@ -16,4 +16,4 @@ license = "MIT"
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-mccs = "^0.1.0"
+mccs = "0.1"

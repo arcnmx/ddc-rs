@@ -12,7 +12,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
-  outputs = { self, flakelib, nixpkgs, ... }@inputs: let
+  outputs = { self, flakelib, nixpkgs, rust, ... }@inputs: let
     nixlib = nixpkgs.lib;
     impure = builtins ? currentSystem;
   in flakelib {
@@ -22,61 +22,64 @@
       plain = {
         mkShell, hostPlatform
       , enableRust ? true, cargo
-      , rustTools ? [ ],
+      , rustTools ? [ ]
+      , generate
       }: mkShell {
         inherit rustTools;
-        nativeBuildInputs = nixlib.optional enableRust cargo;
+        nativeBuildInputs = nixlib.optional enableRust cargo ++ [
+          generate
+        ];
       };
-      stable = { rust'stable, rust'latest, outputs'devShells'plain }: let
-        stable = if impure then rust'stable else rust'latest;
-      in outputs'devShells'plain.override {
-        inherit (stable) mkShell;
+      stable = { rust'stable, outputs'devShells'plain }: outputs'devShells'plain.override {
+        inherit (rust'stable) mkShell;
         enableRust = false;
       };
-      dev = { arc'rustPlatforms, rust'nightly, outputs'devShells'plain }: let
-        nightly = arc'rustPlatforms.nightly.hostChannel;
-        channel = rust'nightly.override {
-          inherit (nightly) date manifestPath;
-          rustcDev = true;
+      dev = { arc'rustPlatforms'nightly, rust'distChannel, outputs'devShells'plain }: let
+        channel = rust'distChannel {
+          inherit (arc'rustPlatforms'nightly) channel date manifestPath;
         };
       in outputs'devShells'plain.override {
         inherit (channel) mkShell;
         enableRust = false;
-        rustTools = [ "rust-analyzer" "rustfmt" ];
+        rustTools = [ "rust-analyzer" ];
       };
       default = { outputs'devShells }: outputs'devShells.plain;
     };
     checks = {
-      rustfmt = { rustfmt, cargo, runCommand }: runCommand "cargo-fmt-check" {
-        nativeBuildInputs = [ cargo (rustfmt.override { asNightly = true; }) ];
-        src = self;
-        meta.name = "cargo fmt";
-      } ''
-        cargo fmt --check \
-          --manifest-path $src/Cargo.toml
-        touch $out
-      '';
-      test = { rustPlatform }: rustPlatform.buildRustPackage {
-        pname = self.lib.cargoToml.package.name;
-        inherit (self.lib.cargoToml.package) version;
-        cargoLock.lockFile = ./Cargo.lock;
-        src = self;
+      rustfmt = { rust'builders, source }: rust'builders.check-rustfmt-unstable {
+        src = source;
+      };
+      test = { rustPlatform, source }: rustPlatform.buildRustPackage {
+        pname = self.lib.crate.package.name;
+        inherit (self.lib.crate) cargoLock version;
+        src = source;
         buildType = "debug";
         meta.name = "cargo test";
       };
     };
+    legacyPackages = { callPackageSet }: callPackageSet {
+      source = { rust'builders }: rust'builders.wrapSource self.lib.crate.src;
+
+      generate = { rust'builders, outputHashes }: rust'builders.generateFiles {
+        paths = {
+          "lock.nix" = outputHashes;
+        };
+      };
+      outputHashes = { rust'builders }: rust'builders.cargoOutputHashes {
+        inherit (self.lib) crate;
+      };
+    } { };
     lib = with nixlib; {
-      cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-      inherit (self.lib.cargoToml.package) version;
-      releaseTag = "v${self.lib.version}";
+      crate = rust.lib.importCargo {
+        inherit self;
+        path = ./Cargo.toml;
+        inherit (import ./lock.nix) outputHashes;
+      };
+      inherit (self.lib.crate.package) version;
     };
     config = rec {
       name = "ddc-rs";
       packages.namespace = [ name ];
-      inputs.arc = {
-        lib.namespace = [ "arc" ];
-        packages.namespace = [ "arc" ];
-      };
     };
   };
 }
