@@ -11,15 +11,5 @@ dependencies = [
 
 [[package]]
 name = "mccs"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74366c6da4179141e0d4551a46799a7e667a68eda60561690d5048bd8e0f8422"
-dependencies = [
- "void",
-]
-
-[[package]]
-name = "void"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
+version = "0.2.0"
+source = "git+https://github.com/arcnmx/mccs-rs?branch=v0.2.x#e2be7229140632b04f4252d6e779fcfe90b6046e"
