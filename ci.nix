@@ -16,6 +16,7 @@ in {
   jobs = {
     nixos = {
       tasks.rustfmt.inputs = singleton checks.rustfmt;
+      tasks.version.inputs = singleton checks.version;
     };
     macos.system = "x86_64-darwin";
   };

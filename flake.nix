@@ -49,6 +49,14 @@
       rustfmt = { rust'builders, source }: rust'builders.check-rustfmt-unstable {
         src = source;
       };
+      version = { rust'builders, source }: rust'builders.check-contents {
+        src = source;
+        patterns = [
+          { path = "src/lib.rs"; docs'rs = {
+            inherit (self.lib.crate.package) name version;
+          }; }
+        ];
+      };
       test = { rustPlatform, source }: rustPlatform.buildRustPackage {
         pname = self.lib.crate.package.name;
         inherit (self.lib.crate) cargoLock version;
