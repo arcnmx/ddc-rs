@@ -3,7 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// A type that can help with implementing the DDC specificationed delays.
+/// A type that can help with implementing the DDC specification delays.
 #[derive(Clone, Debug)]
 pub struct Delay {
     time: Option<Instant>,
