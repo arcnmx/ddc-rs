@@ -12,6 +12,12 @@ repository = "https://github.com/arcnmx/ddc-rs"
 readme = "README.md"
 license = "MIT"
 
+include = [
+	"/src/**/*.rs",
+	"/README*",
+	"/COPYING*",
+]
+
 [badges]
 maintenance = { status = "passively-maintained" }
 
