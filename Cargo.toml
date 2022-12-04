@@ -1,6 +1,6 @@
 [package]
 name = "ddc"
-version = "0.2.2" # keep in sync with html_root_url
+version = "0.2.3" # keep in sync with html_root_url
 authors = ["arcnmx"]
 
 description = "DDC/CI monitor control"

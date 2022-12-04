@@ -1,5 +1,5 @@
 #![deny(missing_docs)]
-#![doc(html_root_url = "https://docs.rs/ddc/0.2.2/")]
+#![doc(html_root_url = "https://docs.rs/ddc/0.2.3/")]
 
 //! Control displays using the DDC/CI protocol.
 //!
