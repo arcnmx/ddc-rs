@@ -54,7 +54,7 @@
         src = source;
         patterns = [
           { path = "src/lib.rs"; docs'rs = {
-            inherit (self.lib.crate.package) name version;
+            inherit (self.lib.crate) name version;
           }; }
         ];
       };
