@@ -2,13 +2,16 @@
   inherit (import ./. { inherit pkgs; }) checks;
 in {
   name = "ddc-rs";
-  ci.gh-actions.enable = true;
+  ci = {
+    version = "v0.7";
+    gh-actions.enable = true;
+  };
   cache.cachix = {
     ci.signingKey = "";
     arc.enable = true;
   };
   channels = {
-    nixpkgs = "22.11";
+    nixpkgs = "24.05";
   };
   tasks = {
     build.inputs = singleton checks.test;
